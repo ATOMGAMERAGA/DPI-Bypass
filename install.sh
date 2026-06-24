@@ -58,14 +58,40 @@ install_deps() {
   esac
 }
 
-# ---- Locate artefacts: prefer a local build, else expect them alongside ----
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ---- Locate artefacts: a local build, an extracted bundle, or fetch a release ----
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "$PWD")"
 GUI_BIN=""; HELPER_BIN=""; NFQWS_BIN=""
-for d in "$SCRIPT_DIR/target/release" "$SCRIPT_DIR/target/debug" "$SCRIPT_DIR"; do
-  [ -z "$GUI_BIN"    ] && [ -x "$d/dpi-bypass" ]            && GUI_BIN="$d/dpi-bypass"
-  [ -z "$HELPER_BIN" ] && [ -x "$d/dpi-bypass-helper" ]     && HELPER_BIN="$d/dpi-bypass-helper"
-done
-[ -x "$SCRIPT_DIR/src-tauri/binaries/nfqws" ] && NFQWS_BIN="$SCRIPT_DIR/src-tauri/binaries/nfqws"
+
+detect_artifacts() {
+  GUI_BIN=""; HELPER_BIN=""; NFQWS_BIN=""
+  local d
+  for d in "$SCRIPT_DIR/target/release" "$SCRIPT_DIR/target/debug" "$SCRIPT_DIR"; do
+    [ -z "$GUI_BIN"    ] && [ -x "$d/dpi-bypass" ]        && GUI_BIN="$d/dpi-bypass"
+    [ -z "$HELPER_BIN" ] && [ -x "$d/dpi-bypass-helper" ] && HELPER_BIN="$d/dpi-bypass-helper"
+  done
+  [ -x "$SCRIPT_DIR/src-tauri/binaries/nfqws" ] && NFQWS_BIN="$SCRIPT_DIR/src-tauri/binaries/nfqws"
+}
+
+# Download + extract the latest published release tarball; point SCRIPT_DIR at it.
+bootstrap_from_release() {
+  command -v curl >/dev/null 2>&1 || die "curl gerekli."
+  command -v tar  >/dev/null 2>&1 || die "tar gerekli."
+  log "En son sürüm indiriliyor…"
+  local api="https://api.github.com/repos/ATOMGAMERAGA/DPI-Bypass/releases/latest"
+  local url
+  url="$(curl -fsSL "$api" \
+    | grep -oE '"browser_download_url"[^,]*linux-x86_64\.tar\.gz"' \
+    | sed -E 's/.*"(https[^"]+)"/\1/' | head -1)"
+  [ -n "$url" ] || die "Sürümde Linux arşivi bulunamadı."
+  local tmp; tmp="$(mktemp -d)"
+  curl -fsSL "$url" -o "$tmp/bundle.tar.gz" || die "İndirme başarısız: $url"
+  tar -xzf "$tmp/bundle.tar.gz" -C "$tmp" || die "Arşiv açılamadı."
+  local dir; dir="$(find "$tmp" -maxdepth 1 -type d -name 'dpi-bypass-*' | head -1)"
+  [ -n "$dir" ] || die "Arşiv içeriği beklenmedik."
+  SCRIPT_DIR="$dir"
+}
+
+detect_artifacts
 
 install_files() {
   log "Installing files into $LIBDIR"
@@ -90,7 +116,17 @@ install_files() {
   log "systemd service installed but left DISABLED (enable 'Always On' from the app)."
 }
 
+FROM_BUILD=0
+for a in "$@"; do [ "$a" = "--from-build" ] && FROM_BUILD=1; done
+
+# Launched via `curl | sudo bash` with no local binaries → fetch the latest
+# published release and install from it.
+if { [ -z "$GUI_BIN" ] || [ -z "$HELPER_BIN" ]; } && [ "$FROM_BUILD" -eq 0 ]; then
+  bootstrap_from_release
+  detect_artifacts
+fi
+
 PM="$(detect_pm)"
 install_deps "$PM"
 install_files
-log "Done. Launch with:  dpi-bypass   (or from your application menu)"
+log "Bitti. Başlatmak için:  dpi-bypass   (veya uygulama menüsünden)"

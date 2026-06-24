@@ -9,6 +9,26 @@
 
 > **Durum — Çapraz platform (Linux + Windows).** Linux'ta zapret/`nfqws` motoru, Windows'ta WinDivert/GoodbyeDPI motoru ile çalışır. Profiller, ağ parmak izi, sessiz arka plan testi, ağ değişimi algılama, gelişmiş strateji düzenleyici, tema/dil ve "Her Zaman Açık" (Linux: systemd, Windows: zamanlanmış görev) tamamlanmıştır. Her iki platform için sürümler GitHub Actions tarafından otomatik (artan numara: v1, v2, …) yayınlanır.
 
+## Hızlı Kurulum
+
+Her iki komut da **en son sürümü** indirip kurar.
+
+**Linux** (terminal):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ATOMGAMERAGA/DPI-Bypass/main/install.sh | sudo bash
+```
+
+**Windows** (yönetici PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/ATOMGAMERAGA/DPI-Bypass/main/install.ps1 | iex
+```
+
+> Windows betiği yönetici değilseniz kendini UAC ile yükseltir (WinDivert sürücüsü yönetici hakkı gerektirir). Linux betiği dağıtımınızı otomatik tanır (apt / dnf / pacman / zypper / xbps / apk), bağımlılıkları kurar ve en son release arşivini yerleştirir.
+>
+> **Güvenlik:** Bir betiği `| sudo bash` / `| iex` ile çalıştırmadan önce inceleyin. Sürüm arşivlerinin yanında SHA256 sağlama toplamları yayınlanır.
+
 ## Ne yapar?
 
 Bir alan adına (öncelikle **Discord**) ISS'nizin DPI'ı yüzünden erişemiyorsanız, DPI-Bypass yerel cihazınızda paket manipülasyonu yaparak erişimi geri kazandırır:
