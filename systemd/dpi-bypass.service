@@ -1,0 +1,22 @@
+[Unit]
+Description=DPI-Bypass Engine
+Documentation=https://github.com/ATOMGAMERAGA/DPI-Bypass
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Runs the privileged helper in daemon mode against the default profile.
+# The helper sets up nftables + nfqws on start and tears them down on stop.
+ExecStart=/usr/lib/dpi-bypass/dpi-bypass-helper daemon --profile-default
+ExecStopPost=/usr/lib/dpi-bypass/dpi-bypass-helper revert
+Restart=on-failure
+RestartSec=3
+# Hardening: the helper only needs network admin capability.
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+NoNewPrivileges=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

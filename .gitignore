@@ -1,0 +1,22 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Node / Vite
+/node_modules
+/dist
+*.tsbuildinfo
+
+# Tauri generated
+/src-tauri/gen
+
+# Engine build scratch (zapret clone etc.)
+/build
+
+# Bundled engine binaries (built by scripts/build-engines.sh)
+/src-tauri/binaries/*
+!/src-tauri/binaries/.gitkeep
+
+# OS noise
+.DS_Store
+*.log

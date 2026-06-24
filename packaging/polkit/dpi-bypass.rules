@@ -1,0 +1,17 @@
+// Polkit rule for DPI-Bypass.
+//
+// The unprivileged GUI runs the privileged helper through pkexec. Without a rule
+// the user would be prompted for every background probe. AUTH_ADMIN_KEEP asks
+// once and caches the authorization for the session, satisfying the spec's
+// "don't ask repeatedly" requirement while still requiring an initial admin
+// authentication. Only the exact installed helper path is matched.
+polkit.addRule(function (action, subject) {
+  if (
+    action.id === "org.freedesktop.policykit.exec" &&
+    action.lookup("program") === "/usr/lib/dpi-bypass/dpi-bypass-helper" &&
+    subject.active &&
+    subject.local
+  ) {
+    return polkit.Result.AUTH_ADMIN_KEEP;
+  }
+});

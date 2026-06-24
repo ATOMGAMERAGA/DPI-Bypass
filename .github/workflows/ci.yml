@@ -1,0 +1,93 @@
+name: CI
+
+# Tests run on every PR and on pushes to non-main branches. Pushes to `main`
+# are handled by release.yml, which runs the same gates and then publishes.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  linux:
+    name: Linux (test)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libnetfilter-queue-dev libnfnetlink-dev libmnl-dev \
+            libcap-dev zlib1g-dev nftables
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate assets
+        run: ./scripts/gen-assets.sh
+
+      - name: Build engines (nfqws)
+        run: ./scripts/build-engines.sh
+
+      - name: Frontend build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Rust fmt & clippy
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Rust tests
+        run: cargo test --workspace
+
+      - name: Helper plan smoke test
+        run: |
+          cargo run -p dpi-helper -- plan \
+            --strategy '{"tcp":{"desync":"fake,split2","split_pos":"midsld","ttl":0,"fooling":"md5sig","repeats":1}}' \
+            --domains discord.com,discord.gg
+
+  windows:
+    name: Windows (test)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch engines (GoodbyeDPI + WinDivert)
+        run: pwsh scripts/build-engines.ps1
+
+      - name: Frontend build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Rust clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Rust tests
+        run: cargo test --workspace
+
+      - name: Helper smoke test
+        shell: pwsh
+        run: |
+          $strategy = '{"tcp":{"desync":"fake,split2","split_pos":"midsld","ttl":0,"fooling":"md5sig","repeats":1}}'
+          cargo run -p dpi-helper -- plan --strategy $strategy --domains discord.com,discord.gg
+          cargo run -p dpi-helper -- status

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=DPI-Bypass
+GenericName=DPI Bypass
+Comment=Domain-based anti-censorship (DPI bypass)
+Comment[tr]=Domain bazlı DPI atlatma uygulaması
+Exec=dpi-bypass
+Icon=dpi-bypass
+Terminal=false
+Type=Application
+Categories=Utility;Network;Security;
+Keywords=dpi;censorship;discord;bypass;vpn;
+StartupWMClass=DPI-Bypass

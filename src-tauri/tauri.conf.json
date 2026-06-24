@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DPI-Bypass",
+  "version": "0.1.0",
+  "identifier": "com.atomgameraga.dpibypass",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DPI-Bypass",
+        "width": 920,
+        "height": 680,
+        "minWidth": 720,
+        "minHeight": 560,
+        "resizable": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'"
+    },
+    "trayIcon": {
+      "id": "main-tray",
+      "iconPath": "icons/32x32.png"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "rpm", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "Domain-based DPI bypass",
+    "longDescription": "Domain-based, profile-aware anti-censorship app for stable access to blocked platforms (e.g. Discord) on networks using DPI.",
+    "linux": {
+      "deb": {
+        "depends": ["nftables", "libnetfilter-queue1", "policykit-1"]
+      }
+    },
+    "externalBin": []
+  },
+  "plugins": {}
+}

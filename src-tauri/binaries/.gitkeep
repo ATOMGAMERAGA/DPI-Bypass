@@ -1,0 +1,2 @@
+# Bundled engine sidecars are produced by scripts/build-engines.sh and are not
+# committed (see .gitignore). This file keeps the directory present.

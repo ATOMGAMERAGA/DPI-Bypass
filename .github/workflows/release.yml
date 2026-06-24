@@ -1,0 +1,202 @@
+name: Release
+
+# On every push to main: run the full Linux + Windows test gate, and only if it
+# all passes, cut a new release. Each release gets the next integer version
+# (v1, v2, v3, …) computed from existing releases.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ---------- Test gate (must pass before anything is published) ----------
+  test-linux:
+    name: Linux (test)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libnetfilter-queue-dev libnfnetlink-dev libmnl-dev \
+            libcap-dev zlib1g-dev nftables
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: ./scripts/gen-assets.sh
+      - run: ./scripts/build-engines.sh
+      - run: |
+          npm ci
+          npm run build
+      - name: fmt, clippy, test
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+  test-windows:
+    name: Windows (test)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: pwsh scripts/build-engines.ps1
+      - run: |
+          npm ci
+          npm run build
+      - name: clippy, test
+        run: |
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+  # ---------- Compute next version + create the release ----------
+  prepare:
+    name: Prepare release
+    needs: [test-linux, test-windows]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute next integer version
+        id: ver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          latest=$(gh api "repos/${GH_REPO}/releases" --paginate -q '.[].tag_name' \
+            | grep -E '^v[0-9]+$' | sed 's/^v//' | sort -n | tail -1)
+          next=$(( ${latest:-0} + 1 ))
+          echo "version=${next}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${next}" >> "$GITHUB_OUTPUT"
+          echo "Next release: v${next}"
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GH_REPO" \
+            --target "${GITHUB_SHA}" \
+            --title "DPI-Bypass $TAG" \
+            --notes "Otomatik sürüm $TAG — tüm Linux ve Windows testleri geçti.
+
+          ## Kurulum
+          **Linux:** \`dpi-bypass-$TAG-linux-x86_64.tar.gz\` indirin, açın ve \`sudo ./install.sh\` çalıştırın.
+          **Windows:** \`dpi-bypass-$TAG-windows-x86_64.zip\` indirin, açın ve yönetici olarak \`install.ps1\` çalıştırın.
+
+          SHA256 sağlama toplamları her arşivin yanında (\`.sha256\`) yayınlanmıştır."
+
+  # ---------- Build + upload platform bundles ----------
+  build-linux:
+    name: Build Linux bundle
+    needs: prepare
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libnetfilter-queue-dev libnfnetlink-dev libmnl-dev \
+            libcap-dev zlib1g-dev nftables
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: ./scripts/gen-assets.sh
+      - run: ./scripts/build-engines.sh
+      - run: |
+          npm ci
+          npm run build
+      - name: Build release binaries
+        run: cargo build --release -p dpi-bypass -p dpi-helper
+      - name: Stage portable bundle
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          name="dpi-bypass-${TAG}-linux-x86_64"
+          stage="stage/${name}"
+          mkdir -p "$stage/src-tauri/binaries"
+          cp target/release/dpi-bypass "$stage/dpi-bypass"
+          cp target/release/dpi-bypass-helper "$stage/dpi-bypass-helper"
+          cp src-tauri/binaries/nfqws "$stage/src-tauri/binaries/nfqws"
+          cp -r install.sh packaging systemd logo.svg README.md LICENSE "$stage/"
+          chmod +x "$stage/install.sh" "$stage/dpi-bypass" "$stage/dpi-bypass-helper"
+          tar -C stage -czf "${name}.tar.gz" "${name}"
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          gh release upload "$TAG" --repo "$GH_REPO" --clobber \
+            dpi-bypass-${TAG}-linux-x86_64.tar.gz \
+            dpi-bypass-${TAG}-linux-x86_64.tar.gz.sha256
+
+  build-windows:
+    name: Build Windows bundle
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: pwsh scripts/build-engines.ps1
+      - run: |
+          npm ci
+          npm run build
+      - name: Build release binaries
+        run: cargo build --release -p dpi-bypass -p dpi-helper
+      - name: Stage portable bundle
+        shell: pwsh
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          $name = "dpi-bypass-$env:TAG-windows-x86_64"
+          $stage = "stage/$name"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target/release/dpi-bypass.exe "$stage/dpi-bypass.exe"
+          Copy-Item target/release/dpi-bypass-helper.exe "$stage/dpi-bypass-helper.exe"
+          Get-ChildItem src-tauri/binaries -Filter "goodbyedpi.exe" | Copy-Item -Destination $stage
+          Get-ChildItem src-tauri/binaries -Filter "WinDivert*" | Copy-Item -Destination $stage
+          Copy-Item install.ps1,README.md,LICENSE,logo.svg $stage
+          Compress-Archive -Path $stage -DestinationPath "$name.zip" -Force
+          (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower() + "  $name.zip" | Out-File "$name.zip.sha256" -Encoding ascii
+      - name: Upload to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          gh release upload "$env:TAG" --repo "$env:GH_REPO" --clobber `
+            "dpi-bypass-$env:TAG-windows-x86_64.zip" `
+            "dpi-bypass-$env:TAG-windows-x86_64.zip.sha256"
