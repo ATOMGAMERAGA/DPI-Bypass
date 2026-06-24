@@ -12,7 +12,12 @@ $Build = Join-Path $Root "build"
 New-Item -ItemType Directory -Force -Path $Out, $Build | Out-Null
 
 $Ver = if ($env:GOODBYEDPI_VER) { $env:GOODBYEDPI_VER } else { "0.2.3rc3" }
-$Url = "https://github.com/ValdikSS/GoodbyeDPI/releases/download/$Ver/GoodbyeDPI-$Ver.zip"
+# The release asset name does not follow a clean pattern (e.g.
+# goodbyedpi-0.2.3rc3-2.zip), so default to the verified direct URL and allow an
+# override via $env:GOODBYEDPI_URL.
+$Url = if ($env:GOODBYEDPI_URL) { $env:GOODBYEDPI_URL } else {
+  "https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.3rc3/goodbyedpi-0.2.3rc3-2.zip"
+}
 $Zip = Join-Path $Build "goodbyedpi.zip"
 $Ext = Join-Path $Build "goodbyedpi"
 

@@ -43,7 +43,9 @@ build_nfqws() {
 
 fetch_goodbyedpi() {
   echo "==> Fetching GoodbyeDPI $GOODBYEDPI_VER (Windows)"
-  local url="https://github.com/ValdikSS/GoodbyeDPI/releases/download/${GOODBYEDPI_VER}/GoodbyeDPI-${GOODBYEDPI_VER}.zip"
+  # Asset name is irregular (e.g. goodbyedpi-0.2.3rc3-2.zip); use the verified
+  # direct URL, overridable via GOODBYEDPI_URL.
+  local url="${GOODBYEDPI_URL:-https://github.com/ValdikSS/GoodbyeDPI/releases/download/0.2.3rc3/goodbyedpi-0.2.3rc3-2.zip}"
   local zip="$BUILD/goodbyedpi.zip"
   curl -fsSL "$url" -o "$zip"
   ( cd "$BUILD" && unzip -o "$zip" -d goodbyedpi >/dev/null )
