@@ -50,6 +50,11 @@ jobs:
       - name: Rust tests
         run: cargo test --workspace
 
+      - name: GUI prod-mode smoke test (no localhost)
+        # Builds the GUI exactly as a release does (custom-protocol) and asserts
+        # it serves the embedded frontend rather than http://localhost:1420.
+        run: cargo test -p dpi-bypass --features dpi-bypass/custom-protocol production_build_serves_embedded_frontend
+
       - name: Helper plan smoke test
         run: |
           cargo run -p dpi-helper -- plan \
@@ -84,6 +89,11 @@ jobs:
 
       - name: Rust tests
         run: cargo test --workspace
+
+      - name: GUI prod-mode smoke test (no localhost)
+        # Builds the GUI exactly as a release does (custom-protocol) and asserts
+        # it serves the embedded frontend rather than http://localhost:1420.
+        run: cargo test -p dpi-bypass --features dpi-bypass/custom-protocol production_build_serves_embedded_frontend
 
       - name: Helper smoke test
         shell: pwsh

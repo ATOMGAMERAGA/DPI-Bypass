@@ -46,6 +46,8 @@ jobs:
           cargo fmt --all -- --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo test --workspace
+      - name: GUI prod-mode smoke test (no localhost)
+        run: cargo test -p dpi-bypass --features dpi-bypass/custom-protocol production_build_serves_embedded_frontend
 
   test-windows:
     name: Windows (test)
@@ -67,6 +69,8 @@ jobs:
         run: |
           cargo clippy --workspace --all-targets -- -D warnings
           cargo test --workspace
+      - name: GUI prod-mode smoke test (no localhost)
+        run: cargo test -p dpi-bypass --features dpi-bypass/custom-protocol production_build_serves_embedded_frontend
 
   # ---------- Compute next version + create the release ----------
   prepare:
@@ -133,7 +137,12 @@ jobs:
           npm ci
           npm run build
       - name: Build release binaries
-        run: cargo build --release -p dpi-bypass -p dpi-helper
+        # custom-protocol is REQUIRED for the GUI: without it tauri::is_dev() is
+        # true and the webview loads devUrl (http://localhost:1420) instead of
+        # the embedded frontend — which fails with ERR_CONNECTION_REFUSED on an
+        # end-user machine. The Tauri CLI sets this automatically; a raw
+        # `cargo build` does not, so we pass it explicitly.
+        run: cargo build --release -p dpi-bypass -p dpi-helper --features dpi-bypass/custom-protocol
       - name: Stage portable bundle
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
@@ -174,7 +183,12 @@ jobs:
           npm ci
           npm run build
       - name: Build release binaries
-        run: cargo build --release -p dpi-bypass -p dpi-helper
+        # custom-protocol is REQUIRED for the GUI: without it tauri::is_dev() is
+        # true and the webview loads devUrl (http://localhost:1420) instead of
+        # the embedded frontend — which fails with ERR_CONNECTION_REFUSED on an
+        # end-user machine. The Tauri CLI sets this automatically; a raw
+        # `cargo build` does not, so we pass it explicitly.
+        run: cargo build --release -p dpi-bypass -p dpi-helper --features dpi-bypass/custom-protocol
       - name: Stage portable bundle
         shell: pwsh
         env:

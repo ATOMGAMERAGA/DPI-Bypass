@@ -7,6 +7,52 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-theme="dark">
+    <!-- Custom in-app title bar (the native frame is disabled via
+         decorations:false). data-tauri-drag-region makes the bar drag the
+         window; double-clicking it toggles maximize. The logo is inline SVG so
+         it stays crisp at any DPI/scale. -->
+    <header id="titlebar" data-tauri-drag-region>
+      <div class="tb-brand" data-tauri-drag-region>
+        <svg class="tb-logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="tbBg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#0E1726"/>
+              <stop offset="1" stop-color="#15233B"/>
+            </linearGradient>
+            <linearGradient id="tbAccent" x1="96" y1="256" x2="416" y2="256" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#22D3EE"/>
+              <stop offset="1" stop-color="#3B82F6"/>
+            </linearGradient>
+          </defs>
+          <path d="M256 40 L432 104 V268 C432 372 360 440 256 472 C152 440 80 372 80 268 V104 Z"
+                fill="url(#tbBg)" stroke="url(#tbAccent)" stroke-width="14"/>
+          <rect x="236" y="150" width="40" height="212" rx="8" fill="#EF4444" opacity="0.85"/>
+          <g stroke="url(#tbAccent)" stroke-width="20" stroke-linecap="round">
+            <line x1="120" y1="200" x2="208" y2="200"/>
+            <line x1="304" y1="200" x2="392" y2="200"/>
+            <line x1="120" y1="256" x2="196" y2="256"/>
+            <line x1="216" y1="256" x2="296" y2="256"/>
+            <line x1="316" y1="256" x2="392" y2="256"/>
+            <line x1="120" y1="312" x2="208" y2="312"/>
+            <line x1="304" y1="312" x2="392" y2="312"/>
+          </g>
+          <path d="M372 232 L412 256 L372 280 Z" fill="url(#tbAccent)"/>
+        </svg>
+        <span class="tb-title">DPI<span>-Bypass</span></span>
+      </div>
+      <div class="tb-controls">
+        <button class="tb-btn" id="tb-min" type="button" aria-label="Minimize" title="Minimize">
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><rect x="2" y="5.5" width="8" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="tb-btn" id="tb-max" type="button" aria-label="Maximize" title="Maximize">
+          <svg class="tb-ico-max" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+          <svg class="tb-ico-restore" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><rect x="2.5" y="3.5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1"/><path d="M4.5 3.5 V2 H10 V7.5 H8.5" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+        </button>
+        <button class="tb-btn tb-close" id="tb-close" type="button" aria-label="Close" title="Close">
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+      </div>
+    </header>
     <div id="app">
       <nav id="nav"></nav>
       <main id="view"></main>

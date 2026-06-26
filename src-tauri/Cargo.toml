@@ -31,5 +31,10 @@ chrono = { workspace = true }
 dirs = "5"
 
 [features]
-# Enabled by `tauri build`; lets the binary run without a terminal on Windows.
+# REQUIRED for any release/production build: embeds the frontend so the webview
+# serves it directly. Without it tauri::is_dev() is true and the app loads
+# devUrl (http://localhost:1420), failing with ERR_CONNECTION_REFUSED on a user
+# machine. `cargo tauri build` enables it automatically; a raw `cargo build`
+# must pass `--features dpi-bypass/custom-protocol` (enforced by a compile_error
+# guard in src/main.rs for release builds).
 custom-protocol = ["tauri/custom-protocol"]

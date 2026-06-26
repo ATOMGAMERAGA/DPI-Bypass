@@ -86,3 +86,25 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
         .build(app)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    // Regression guard for the "localhost refused to connect" bug.
+    //
+    // Tauri serves devUrl (http://localhost:1420) whenever it is in dev mode,
+    // and dev mode is exactly `!cfg!(feature = "custom-protocol")`. So a
+    // production build (custom-protocol on) MUST report not-dev; if it doesn't,
+    // the shipped webview would load localhost and users get
+    // ERR_CONNECTION_REFUSED. This test only exists when the feature is enabled,
+    // so `cargo test --workspace` (no feature) skips it; CI runs it explicitly
+    // with `--features dpi-bypass/custom-protocol`.
+    #[cfg(feature = "custom-protocol")]
+    #[test]
+    fn production_build_serves_embedded_frontend() {
+        assert!(
+            !tauri::is_dev(),
+            "custom-protocol is enabled but tauri::is_dev() is still true: the \
+             webview would load http://localhost:1420 instead of the bundled UI."
+        );
+    }
+}

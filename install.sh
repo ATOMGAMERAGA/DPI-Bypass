@@ -97,8 +97,8 @@ install_files() {
   log "Installing files into $LIBDIR"
   install -d "$LIBDIR" "$BINDIR" "$DESKTOPDIR" "$POLKITDIR" "$ICONDIR/scalable/apps"
 
-  [ -n "$GUI_BIN" ]    || die "GUI binary not found — build first: cargo build --release"
-  [ -n "$HELPER_BIN" ] || die "Helper binary not found — build first: cargo build --release"
+  [ -n "$GUI_BIN" ]    || die "GUI binary not found — build first: cargo build --release -p dpi-bypass --features dpi-bypass/custom-protocol"
+  [ -n "$HELPER_BIN" ] || die "Helper binary not found — build first: cargo build --release -p dpi-helper"
   [ -n "$NFQWS_BIN" ]  || warn "nfqws engine not found — run scripts/build-engines.sh (bypass won't work until present)"
 
   install -m 0755 "$GUI_BIN"    "$LIBDIR/dpi-bypass"

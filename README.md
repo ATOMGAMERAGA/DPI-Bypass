@@ -93,7 +93,12 @@ sudo apt-get install -y libnetfilter-queue-dev libnfnetlink-dev libmnl-dev libca
 npm install && npm run build
 
 # 4. Backend (release)
-cargo build --release
+#    GUI için `custom-protocol` özelliği ZORUNLUDUR: olmadan uygulama
+#    http://localhost:1420 (dev sunucusu) adresine bağlanmaya çalışır ve son
+#    kullanıcıda "localhost refused to connect" (ERR_CONNECTION_REFUSED) hatası
+#    verir. (Alternatif: `cargo tauri build` bunu otomatik yapar.)
+cargo build --release -p dpi-helper
+cargo build --release -p dpi-bypass --features dpi-bypass/custom-protocol
 
 # 5. Kur
 sudo ./install.sh

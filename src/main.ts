@@ -1,6 +1,7 @@
 // DPI-Bypass frontend — a small hand-rolled SPA (no framework, per spec).
 import { api, Profile, Settings, DomainCheck, Strategy } from "./api";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import tr from "./i18n/tr.json";
 import en from "./i18n/en.json";
 
@@ -68,7 +69,8 @@ function renderNav() {
     ["settings", t("nav.settings")],
     ["about", t("nav.about")],
   ];
-  nav.innerHTML = `<div class="brand">DPI<span>-Bypass</span></div>`;
+  // The brand now lives in the title bar; the sidebar starts straight at nav.
+  nav.innerHTML = "";
   for (const [id, label] of items) {
     const b = el(`<button class="navbtn ${current === id ? "active" : ""}">${label}</button>`);
     b.onclick = () => go(id);
@@ -481,7 +483,32 @@ function render() {
   }
 }
 
+// Wire the custom title bar's window controls. The bar itself drags the window
+// via data-tauri-drag-region (handled natively); here we only bind the buttons
+// and keep the maximize/restore icon in sync with the real window state.
+async function setupTitlebar() {
+  const win = getCurrentWindow();
+  const byId = (id: string) => document.getElementById(id);
+
+  byId("tb-min")?.addEventListener("click", () => win.minimize());
+  byId("tb-max")?.addEventListener("click", () => win.toggleMaximize());
+  byId("tb-close")?.addEventListener("click", () => win.close());
+
+  const syncMaxIcon = async () => {
+    try {
+      document.body.classList.toggle("maximized", await win.isMaximized());
+    } catch {
+      /* ignore — window may be mid-transition */
+    }
+  };
+  await syncMaxIcon();
+  await win.onResized(syncMaxIcon);
+}
+
 async function boot() {
+  // Never let title-bar wiring block the rest of the UI from loading.
+  await setupTitlebar().catch(() => {});
+
   try {
     settings = await api.getSettings();
   } catch {
